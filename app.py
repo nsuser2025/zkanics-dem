@@ -8,4 +8,4 @@ from cielab.main import mkslide_gui
 st.image("zkanics_cute_logo.png", caption="Supported by Zkanics F. P. S. since 2024", width=250)
 st.markdown("---")
 
-mkslide_gui ()
+cielab_gui ()
