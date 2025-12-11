@@ -66,7 +66,9 @@ def cielab_gui():
 
     # EXPLANATIONS
     st.markdown("#### CIE Lab変換")
-    st.markdown("""透過率スペクトルをCIE Lab変換するアプリです。
+    st.markdown("""透過率スペクトルをCIE Lab変換するアプリです.
+    光源はD65, 等色関数はCIEが公開している CIE_xyz_1931_2deg.csv, 
+    光源D65の分光強度分布は同じくCIEが公開している CIE_std_illum_D65.csv を用いています。
     このアプリにアップロードした情報は全てメモリ上に保存されます。
     セッションの終了と同時にサーバー上のスペクトル情報は完全に消去されます。
     また、出力されるCSVにはコードインジェクションの無効化処理が施されています。
