@@ -99,57 +99,25 @@ def cielab_gui():
 
     st.markdown("---")
 
-    # UPLOADED FILES
-    uploaded_pict = st.file_uploader("画像ファイルを選択してください（複数可）",
-                                     type=["png", "jpg", "jpeg"], accept_multiple_files=True) 
-
-    st.session_state.all_images = {pic.name: Image.open(pic) for pic in uploaded_pict}
-    st.success(f"{len(uploaded_pict)} 件の画像をアップロードしました")
-
-    images = st.session_state.all_images
-    if not images:
-       st.info("画像ファイルをアップロードしてください。")
-       return
-
-    # SELECT
-    condition_id = 1
-    current_df_ui = df.copy()
-    condition_container = st.expander(f"条件を設定/確認", expanded=True)
-
-    for col_name in FILTER_COLS:
-        options = ["全て選択"] + current_df_ui[col_name].astype(str).unique().tolist()
-        key_multiselect = f'condition_{condition_id}_{col_name}'
-        selected_values = st.session_state.get(key_multiselect, ["全て選択"])
-
-        condition_container.multiselect(
-            f"▼ {col_name} を選んでください（複数選択可）",
-            options=options,
-            default=selected_values,
-            key=key_multiselect
-        )
-
-        if selected_values and "全て選択" not in selected_values:
-           current_df_ui = current_df_ui[current_df_ui[col_name].astype(str).isin(selected_values)]
-
     # FILLTERING RESULTS
-    final_results = get_filtered_names_by_multiselect_full_order(df, condition_id=condition_id, filter_cols=FILTER_COLS)
+    #final_results = get_filtered_names_by_multiselect_full_order(df, condition_id=condition_id, filter_cols=FILTER_COLS)
 
-    display_names = [name for name in final_results if name in images]
+    #display_names = [name for name in final_results if name in images]
                
-    condition_container.subheader(f"✅ 条件に合致する画像 ({len(display_names)} 件)")
-    if len(final_results) == 0:
-       condition_container.warning("条件に合致する画像はありません。")
-    else:
-       cols = condition_container.columns(COLUMNS_PER_ROW)
-       for j, name in enumerate(display_names):
-           col = cols[j % COLUMNS_PER_ROW]
-           #col.image(images[name], use_container_width=True) 
-           #col.image(images[name], 
-           #          caption=name if len(name) <= 40 else name[:40] + "...", 
-           #          use_container_width=True)
-           col.image(images[name], 
-                     caption=name if len(name) <= 40 else name[:40] + "...", 
-                     width="content")
+    #condition_container.subheader(f"✅ 条件に合致する画像 ({len(display_names)} 件)")
+    #if len(final_results) == 0:
+    #   condition_container.warning("条件に合致する画像はありません。")
+    #else:
+    #   cols = condition_container.columns(COLUMNS_PER_ROW)
+    #   for j, name in enumerate(display_names):
+    #       col = cols[j % COLUMNS_PER_ROW]
+    #       #col.image(images[name], use_container_width=True) 
+    #       #col.image(images[name], 
+    #       #          caption=name if len(name) <= 40 else name[:40] + "...", 
+    #       #          use_container_width=True)
+    #       col.image(images[name], 
+    #                 caption=name if len(name) <= 40 else name[:40] + "...", 
+    #                 width="content")
 
 # MODULE ERROR MESSAGE
 if __name__ == "__main__":
