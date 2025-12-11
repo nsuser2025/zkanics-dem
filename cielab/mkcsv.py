@@ -81,7 +81,7 @@ def mkcsv_gui(uploaded_file):
     st.dataframe(df_safe)
     st.markdown("---")
 
-    st.success("読み込み完了しました。範囲指定はありません。")
+    st.success("読み込み完了しました。")
     return df_orig
 
 
