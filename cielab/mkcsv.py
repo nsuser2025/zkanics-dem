@@ -53,7 +53,7 @@ def mkcsv_gui(uploaded_file):
         try:
             df_orig = pd.read_excel(uploaded_file, header=None)
         except Exception as e:
-            st.error(f"Pandas による Excel 読み込みでエラー: {e}")
+            st.error(f"Pandas による Excel 読み込みエラー: {e}")
             return None
 
     # ====================================
