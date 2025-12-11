@@ -62,7 +62,7 @@ def get_filtered_names_by_multiselect_full_order(df: pd.DataFrame, condition_id:
 
     return current_df["ファイル名"].astype(str).tolist()
 
-def mkslide_gui():
+def cielab_gui():
 
     # EXPLANATIONS
     st.markdown("#### CIE Lab変換")
