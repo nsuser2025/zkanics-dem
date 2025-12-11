@@ -25,19 +25,6 @@ def sanitize_filename(name: str) -> str:
     name = name.replace(" ", "_")
     return re.sub(r"[^A-Za-z0-9._-]", "", name)[:200]
 
-def safe_open_image(uploaded_file) -> Image.Image:
-    """画像を安全に開く（巨大画像・破損チェック・EXIF除去）"""
-    uploaded_file.seek(0)
-    img = Image.open(uploaded_file)
-    img.verify()  # 破損や不正データの簡易チェック
-    uploaded_file.seek(0)
-    img = Image.open(uploaded_file).convert("RGB")  # 再オープンしてRGB化
-    # 再エンコードしてEXIF除去
-    buf = io.BytesIO()
-    img.save(buf, format="JPEG", quality=85)
-    buf.seek(0)
-    return Image.open(buf)
-
 # CSV FILLTERING TOOL
 def get_filtered_names_by_multiselect_full_order(df: pd.DataFrame, condition_id: int, filter_cols: List[str]) -> List[str]:
     
@@ -80,9 +67,7 @@ def cielab_gui():
         st.session_state.data_df = None
     if 'condition_count' not in st.session_state:
         st.session_state.condition_count = 1
-    if 'all_images' not in st.session_state:
-        st.session_state.all_images = {}
-
+        
     # CSV FILE READER
     uploaded_file = st.file_uploader("透過率スペクトルのExcel/CSVファイルをアップロード", 
                     type=["xlsx", "xls", "xlsm", "csv"])
