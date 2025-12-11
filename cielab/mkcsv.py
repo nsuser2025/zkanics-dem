@@ -2,8 +2,17 @@ import streamlit as st
 import string
 import pandas as pd
 from openpyxl import load_workbook
+import os
+import re
 
+# ================================
+# CSV インジェクション防止
+# ================================
 def sanitize_for_csv_injection(df):
+    """
+    CSVインジェクションを防止:
+    = + - @ で始まるセルに ' を付加して無効化する
+    """
     for col in df.columns:
         if df[col].dtype == 'object':
             df[col] = (
@@ -15,112 +24,160 @@ def sanitize_for_csv_injection(df):
     return df
 
 
+# ================================
+# Excel 範囲の正規表現チェック
+# ================================
+RANGE_REGEX = re.compile(r"^[A-Za-z]+[0-9]+:[A-Za-z]+[0-9]+$")
+
+
+def validate_range_format(range_str):
+    """
+    Excel の範囲（例：A1:A10）の形式チェック
+    """
+    return bool(RANGE_REGEX.match(range_str))
+
+
+# ================================
+# メイン GUI
+# ================================
 def mkcsv_gui(uploaded_file):
+
+    # --- ファイルサイズ制限（20MB） ---
+    uploaded_file.seek(0, os.SEEK_END)
+    file_size = uploaded_file.tell()
+    uploaded_file.seek(0)
+
+    if file_size > 20 * 1024 * 1024:
+        st.error("⚠ ファイルサイズが20MBを超えています。処理を中止します。")
+        return None
 
     file_name = uploaded_file.name.lower()
 
-    # --- ファイル形式を判定 ---
     is_csv = file_name.endswith(".csv")
     is_excel = file_name.endswith((".xlsx", ".xls", ".xlsm"))
 
     if not (is_csv or is_excel):
-        st.error("対応形式は CSV / Excel のみです。")
-        st.stop()
+        st.error("対応形式は CSV または Excel ファイルのみです。")
+        return None
 
-    # --- Excel の場合 ---
+    # ====================================
+    # Excel の場合
+    # ====================================
     if is_excel:
         try:
             wb = load_workbook(uploaded_file, data_only=True)
             ws = wb.active
         except Exception as e:
-            st.error(f"Excel ファイル読み込みエラー: {e}")
-            st.stop()
+            st.error(f"Excel の読み込み中にエラー: {e}")
+            return None
 
-        # Excel を pandas 読み込み
-        df_orig = pd.read_excel(uploaded_file, header=None)
+        try:
+            df_orig = pd.read_excel(uploaded_file, header=None)
+        except Exception as e:
+            st.error(f"Pandas による Excel 読み込みでエラー: {e}")
+            return None
 
-    # --- CSV の場合 ---
+    # ====================================
+    # CSV の場合
+    # ====================================
     else:
-        # CSV は load_workbook 不要
-        wb = None
-        ws = None
+        ws = None  # CSV はセルアクセスなし
 
         try:
             df_orig = pd.read_csv(uploaded_file, header=None, encoding="utf-8")
         except Exception:
-            # Excel 形式として開いて再チャレンジ（Shift-JISなど）
             try:
                 df_orig = pd.read_csv(uploaded_file, header=None, encoding="shift_jis")
             except Exception as e:
-                st.error(f"CSV ファイル読み込みエラー: {e}")
-                st.stop()
+                st.error(f"CSV 読み込みエラー: {e}")
+                return None
 
-    # --- 表示処理 ---
+    # ====================================
+    # 読み込んだデータの表示
+    # ====================================
     df_orig.columns = list(string.ascii_uppercase[:len(df_orig.columns)])
     df_orig.index = range(1, len(df_orig) + 1)
 
-    df_orig_safe = sanitize_for_csv_injection(df_orig.copy())
-    df_orig_safe.columns = df_orig_safe.columns.map(str)
+    df_safe = sanitize_for_csv_injection(df_orig.copy())
+    df_safe.columns = df_safe.columns.map(str)
 
-    st.dataframe(df_orig_safe)
+    st.dataframe(df_safe)
     st.markdown("---")
 
-    # Excel のときだけ範囲指定の GUI を表示
-    if is_excel:
-        st.markdown("**各データのExcel範囲を A1:A10 のように入力してください。（1列のみ対応）**")
+    # ====================================
+    # CSV の場合はここで終わり（Excel のみ範囲入力）
+    # ====================================
+    if not is_excel:
+        st.info("CSV ファイルのため範囲指定は不要です。")
+        return df_orig
 
-        file_input = st.text_input("ファイル名範囲", value="A1:A10", key="k_file")
-        exam_input = st.text_input("試験範囲", value="B1:B10", key="k_exam")
-        face_input = st.text_input("測定面範囲", value="C1:C10", key="k_face")
-        cath_input = st.text_input("正極範囲", value="D1:D10", key="k_cath")
-        mesu_input = st.text_input("測定範囲", value="E1:E10", key="k_mesu")
-        elec_input = st.text_input("電解液範囲", value="F1:F10", key="k_elec")
-        magn_input = st.text_input("倍率範囲", value="G1:G10", key="k_magn")
+    # ====================================
+    # Excel 用セル範囲入力 UI
+    # ====================================
+    st.markdown("**各データの Excel 範囲を A1:A10 のように入力してください。（1 列のみ対応）**")
 
-        range_inputs = {
-            "ファイル名": file_input,
-            "試験": exam_input,
-            "測定面": face_input,
-            "正極": cath_input,
-            "測定": mesu_input,
-            "電解液": elec_input,
-            "倍率": magn_input,
-        }
+    range_inputs = {
+        "ファイル名": st.text_input("ファイル名範囲", "A1:A10"),
+        "試験":      st.text_input("試験範囲", "B1:B10"),
+        "測定面":    st.text_input("測定面範囲", "C1:C10"),
+        "正極":      st.text_input("正極範囲", "D1:D10"),
+        "測定":      st.text_input("測定範囲", "E1:E10"),
+        "電解液":    st.text_input("電解液範囲", "F1:F10"),
+        "倍率":      st.text_input("倍率範囲", "G1:G10"),
+    }
 
-        # 範囲抽出処理（Excelのみ）
-        def extract_range_data(range_str):
-            try:
-                cells = ws[range_str]
-                return [c[0].value for c in cells], None
-            except:
-                return None, f"無効な範囲: {range_str}"
+    # ====================================
+    # 範囲抽出
+    # ====================================
+    def extract_range_data(range_str):
+        if not validate_range_format(range_str):
+            return None, f"形式が不正です (例: A1:A10) → '{range_str}'"
 
-        if st.button("CSVファイルを生成"):
-            extracted_data = {}
-            errors = []
+        try:
+            cells = ws[range_str]
+            data_list = [cell[0].value for cell in cells]
+            return data_list, None
+        except Exception as e:
+            return None, f"範囲抽出中にエラー: {e}"
 
-            for col_name, range_str in range_inputs.items():
-                lst, err = extract_range_data(range_str)
-                if err:
-                    errors.append(f"{col_name}: {err}")
-                extracted_data[col_name] = lst
+    # ====================================
+    # 生成ボタン
+    # ====================================
+    if st.button("CSV データを生成"):
+        extracted = {}
+        errors = []
 
-            if errors:
-                st.error("範囲エラーがあります")
-                for e in errors:
-                    st.write("- " + e)
-                st.stop()
+        for col_name, range_str in range_inputs.items():
+            data, err = extract_range_data(range_str)
+            if err:
+                errors.append(f"{col_name}: {err}")
+            extracted[col_name] = data
 
-            df_out = pd.DataFrame(extracted_data)
-            df_safe = sanitize_for_csv_injection(df_out.copy())
-            df_safe.columns = df_safe.columns.map(str)
+        # エラー処理
+        if errors:
+            st.error("次のエラーにより処理できません：")
+            for e in errors:
+                st.write(" - " + e)
+            return None
 
-            st.dataframe(df_safe)
-            return df_out
+        # 全リストの長さが一致するかチェック
+        lengths = set(len(v) for v in extracted.values())
+        if len(lengths) != 1:
+            st.error("抽出したデータの行数が一致しません。")
+            st.json({k: len(v) for k, v in extracted.items()})
+            return None
 
-    # CSV の場合はそのまま返す
-    return df_orig_safe
+        df_out = pd.DataFrame(extracted)
 
+        df_safe = sanitize_for_csv_injection(df_out.copy())
+        df_safe.columns = df_safe.columns.map(str)
+
+        st.success("CSV データを生成しました。")
+        st.dataframe(df_safe)
+
+        return df_out
+
+    return None
 
 # MODULE ERROR MESSAGE
 if __name__ == "__main__":
