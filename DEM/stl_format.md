@@ -21,7 +21,7 @@ vertex x y z </br>
 vertex x y z </br>
 vertex x y z </br>
 end loop </br>
-end facet </br>
+end facet </br></br>
 </span> 
 青文字の箇所がメッシュの枚数分書かれている.
 </p>
