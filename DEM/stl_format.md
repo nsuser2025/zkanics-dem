@@ -10,6 +10,7 @@ Fig. 1のように右ネジの法則で3頂点の座標とメッシュの法線�
 </figure>
 
 <p>
+</br>
 solid 任意の文字列 <br> 
 <span style="color:blue">
 facet normal x成分 y成分 z成分 </br>
